@@ -1,5 +1,4 @@
 #include "../include/utils.h"
-#include <curses.h>
 
 int main(int argc, char const *argv[])
 {
@@ -87,7 +86,7 @@ int main(int argc, char const *argv[])
                     mode = 1;
                     break;
                 } else if (input == 'n') { // Turn on the normal mode
-                    mode = 1;
+                    mode = 0;
                     break;
                 } else if (input == 'v') { // Turn on the visual mode
                     mode = 2;
@@ -104,8 +103,21 @@ int main(int argc, char const *argv[])
             // Making insert mode
             if (mode == 1) {
                 while ((character = getch())) {
-                    if (character == '\033')
-                        break;
+                    if (character == '\033') {
+                        mode = 0; // switch to normal mode
+                        char input[256];
+                        wgetnstr(editor,input,sizeof(input)-1);
+                        if (strcmp(input,":wq") == 0) {
+                            // ADD SAVING FUNCTONALITY
+                            endwin();
+                            exit(EXIT_SUCCESS);
+                        } else if (strcmp(input,":q") == 0) {
+                            endwin();
+                            exit(EXIT_SUCCESS);
+                        } else if (strcmp(input,":w") == 0) {
+                            // Have to implement file saving functionality
+                        }
+                    }
                     if (character == '\n') {
                         line_number++;
                         col_number = 5;
