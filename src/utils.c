@@ -5,4 +5,5 @@ void ncurses_init(void) {
     cbreak();
     noecho();
     start_color();
+    keypad(stdscr,TRUE);
 }
