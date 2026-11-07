@@ -113,6 +113,7 @@ int main(int argc, char const *argv[])
                     if (character == '\033') {
                         mode = 0; // switch to normal mode
                         char input[256];
+                        memset(input,0,256);
                         int index = 0;
                         int c;
                         // wgetnstr(editor,input,sizeof(input)-1);
