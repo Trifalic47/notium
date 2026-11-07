@@ -4,4 +4,5 @@
 #include <string.h>
 #include <fcntl.h>
 #include <curses.h>
+
 void ncurses_init(void);

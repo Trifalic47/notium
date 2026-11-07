@@ -1,4 +1,5 @@
 #include "../include/utils.h"
+#include <curses.h>
 
 int main(int argc, char const *argv[])
 {
@@ -61,11 +62,16 @@ int main(int argc, char const *argv[])
             int input;
             int mode; // 0 for normal,1 for insert and 2 for visual (no mode is set as default)
 
-            int editor_lines = (int)(LINES/1.07);
+            int editor_lines = (int)(LINES/1.1);
             int editor_cols = COLS-4;
             WINDOW *editor = newwin(editor_lines,editor_cols,1,1);
             scrollok(editor,TRUE);
             box(editor,0,0);
+
+            int footer_lines = (LINES-editor_lines)-1;
+            int footer_cols = COLS-4;
+            WINDOW *footer = newwin(footer_lines,footer_cols,editor_lines+1,1);
+            box(footer,0,0);
 
             /*Making lines with the line numbers
              * Using derwin() to make a new window for the line numbers
@@ -80,6 +86,7 @@ int main(int argc, char const *argv[])
             refresh();
             wrefresh(lines);
             wrefresh(editor);
+            wrefresh(footer);
 
             while ((input=getch())) {
                 if (input== 'i') { // Turn on the insert mode
@@ -106,7 +113,20 @@ int main(int argc, char const *argv[])
                     if (character == '\033') {
                         mode = 0; // switch to normal mode
                         char input[256];
-                        wgetnstr(editor,input,sizeof(input)-1);
+                        int index = 0;
+                        int c;
+                        // wgetnstr(editor,input,sizeof(input)-1);
+                        while (1) {
+                            c = getch();
+                            if (c == '\n') {
+                                break;
+                            }
+                            input[index] = c;
+                            index++;
+                            mvwprintw(footer,1,index+1,"%c",c);
+                            refresh();
+                            wrefresh(footer);
+                        }
                         if (strcmp(input,":wq") == 0) {
                             // ADD SAVING FUNCTONALITY
                             endwin();
@@ -116,6 +136,10 @@ int main(int argc, char const *argv[])
                             exit(EXIT_SUCCESS);
                         } else if (strcmp(input,":w") == 0) {
                             // Have to implement file saving functionality
+                        } else {
+                            // mvwhline(footer,1,1,' ',COLS);
+                            // refresh();
+                            // wrefresh(footer);
                         }
                     }
                     if (character == '\n') {
