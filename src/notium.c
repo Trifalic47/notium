@@ -162,9 +162,10 @@ int main(int argc, char const *argv[])
                         continue;
                     } else if (character == KEY_BACKSPACE || character == '\b' || character == 127) {
                         // Backspace: move back and delete character
-                        if (col_number > 0) {
+                        if (col_number > 5) {
                             col_number--;
-                            mvwdelch(editor, line_number, col_number);
+                            mvwprintw(editor,line_number,col_number," ");
+                            wmove(editor,line_number,col_number);
                         }
                     } else {
                         // Normal character: check right boundary before printing
