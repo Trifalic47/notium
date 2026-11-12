@@ -80,7 +80,7 @@ int main(int argc, char const *argv[])
             WINDOW *lines = derwin(editor, editor_lines-2, 4, 0, 2);
             mvwprintw(lines,1,1,"1");
 
-            init_pair(3,COLOR_BLACK,COLOR_CYAN);
+            init_pair(3,COLOR_WHITE,COLOR_BLACK);
             wattron(editor,COLOR_PAIR(3));
             mvwhline(editor,line_number,6,' ',editor_cols-7);
             refresh();
@@ -114,6 +114,7 @@ int main(int argc, char const *argv[])
                         mode = 0; // switch to normal mode
                         char input[256];
                         memset(input,0,256);
+                        mvwhline(footer,1,1,' ',editor_cols-4);
                         int index = 0;
                         int c;
                         // wgetnstr(editor,input,sizeof(input)-1);
@@ -123,6 +124,12 @@ int main(int argc, char const *argv[])
                                 break;
                             }
                             input[index] = c;
+                            if (index == 10) {
+                                mvwprintw(footer,1,1,"Command limit exceeded\n");
+                                refresh();
+                                wrefresh(footer);
+                                break;
+                            }
                             index++;
                             mvwprintw(footer,1,index+1,"%c",c);
                             refresh();
@@ -144,6 +151,7 @@ int main(int argc, char const *argv[])
                         }
                     }
                     if (character == '\n') {
+                        // newline (when enter key is pressed)
                         line_number++;
                         col_number = 5;
                         mvwprintw(lines, line_number, 1, "%d", line_number);
@@ -152,13 +160,26 @@ int main(int argc, char const *argv[])
                         wrefresh(lines);
                         wrefresh(editor);
                         continue;
+                    } else if (character == KEY_BACKSPACE || character == '\b' || character == 127) {
+                        // Backspace: move back and delete character
+                        if (col_number > 5) {
+                            col_number--;
+                            mvwprintw(editor,line_number,col_number," ");
+                            wmove(editor,line_number,col_number);
+                        }
+                    } else {
+                        // Normal character: check right boundary before printing
+                        int max_x = getmaxx(editor);
+                        if (col_number < max_x - 1) {
+                            mvwprintw(editor, line_number, col_number, "%c", character);
+                            col_number++;
+                        }
                     }
-                    mvwprintw(editor, line_number, col_number, "%c", character);
-                    refresh();
 
+                    // Consolidated refresh at the end of the loop
+                    refresh();
                     wrefresh(lines);
                     wrefresh(editor);
-                    col_number++;
                 }
             }
             refresh();
@@ -171,5 +192,3 @@ int main(int argc, char const *argv[])
     endwin();
     return EXIT_SUCCESS;
 }
-// wnoutrefresh(editor);
-// doupdate();
