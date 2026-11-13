@@ -124,11 +124,19 @@ int main(int argc, char const *argv[])
                                 break;
                             }
                             input[index] = c;
-                            if (index == 10) {
+                            if (index == 255) {
                                 mvwprintw(footer,1,1,"Command limit exceeded\n");
                                 refresh();
                                 wrefresh(footer);
                                 break;
+                            }
+                            if (c == '\b' || c == 127 || c == KEY_BACKSPACE) {
+                                mvwprintw(footer,1,index+1," ");
+                                wmove(footer,1,index+1);
+                                index--;
+                                refresh();
+                                wrefresh(footer);
+                                continue;
                             }
                             index++;
                             mvwprintw(footer,1,index+1,"%c",c);
@@ -144,7 +152,8 @@ int main(int argc, char const *argv[])
                             exit(EXIT_SUCCESS);
                         } else if (strcmp(input,":w") == 0) {
                             // Have to implement file saving functionality
-                        } else {
+                        }
+                        else {
                             // mvwhline(footer,1,1,' ',COLS);
                             // refresh();
                             // wrefresh(footer);
@@ -167,7 +176,11 @@ int main(int argc, char const *argv[])
                             mvwprintw(editor,line_number,col_number," ");
                             wmove(editor,line_number,col_number);
                         }
-                    } else {
+                    } else if (character == KEY_LEFT) {
+                        col_number--;
+                        wmove(editor,line_number,col_number);
+                    }
+                    else {
                         // Normal character: check right boundary before printing
                         int max_x = getmaxx(editor);
                         if (col_number < max_x - 1) {
