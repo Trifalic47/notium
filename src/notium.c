@@ -110,56 +110,13 @@ int main(int argc, char const *argv[])
             // Making insert mode
             if (mode == 1) {
                 while ((character = getch())) {
-                    if (character == '\033') {
-                        mode = 0; // switch to normal mode
-                        char input[256];
-                        memset(input,0,256);
-                        mvwhline(footer,1,1,' ',editor_cols-4);
-                        int index = 0;
-                        int c;
-                        // wgetnstr(editor,input,sizeof(input)-1);
-                        while (1) {
-                            c = getch();
-                            if (c == '\n') {
-                                break;
-                            }
-                            input[index] = c;
-                            if (index == 255) {
-                                mvwprintw(footer,1,1,"Command limit exceeded\n");
-                                refresh();
-                                wrefresh(footer);
-                                break;
-                            }
-                            if (c == '\b' || c == 127 || c == KEY_BACKSPACE) {
-                                mvwprintw(footer,1,index+1," ");
-                                wmove(footer,1,index+1);
-                                index--;
-                                refresh();
-                                wrefresh(footer);
-                                continue;
-                            }
-                            index++;
-                            mvwprintw(footer,1,index+1,"%c",c);
-                            refresh();
-                            wrefresh(footer);
-                        }
-                        if (strcmp(input,":wq") == 0) {
-                            // ADD SAVING FUNCTONALITY
-                            endwin();
-                            exit(EXIT_SUCCESS);
-                        } else if (strcmp(input,":q") == 0) {
-                            endwin();
-                            exit(EXIT_SUCCESS);
-                        } else if (strcmp(input,":w") == 0) {
-                            // Have to implement file saving functionality
-                        }
-                        else {
-                            // mvwhline(footer,1,1,' ',COLS);
-                            // refresh();
-                            // wrefresh(footer);
+                    if (character == '\033') { // Normal Mode end
+                        mode = handle_normal_mode(footer,editor_cols);
+                        if (mode == -1) {
+                            return 0;
                         }
                     }
-                    if (character == '\n') {
+                    else if (character == '\n') {
                         // newline (when enter key is pressed)
                         line_number++;
                         col_number = 5;
@@ -177,8 +134,10 @@ int main(int argc, char const *argv[])
                             wmove(editor,line_number,col_number);
                         }
                     } else if (character == KEY_LEFT) {
-                        col_number--;
-                        wmove(editor,line_number,col_number);
+                        if (col_number > 5) {
+                            col_number--;
+                            wmove(editor,line_number,col_number);
+                        }
                     }
                     else {
                         // Normal character: check right boundary before printing
