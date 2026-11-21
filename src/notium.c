@@ -1,13 +1,15 @@
 #include "../include/utils.h"
 #include <curses.h>
 
+struct Editor Editor;
+
 int main(int argc, char const *argv[])
 {
     ncurses_init();
     box(stdscr,0,0);
 
     /* TITLE */
-    WINDOW *title = newwin(LINES/3.14,COLS-4,1,2);
+    WINDOW *title = newwin(LINES/4,COLS-4,1,2);
     char *title_str = "NOTIUM";
 
     box(title,0,0);
@@ -56,95 +58,90 @@ int main(int argc, char const *argv[])
         } else if (ch - '2' == 0) {
             /* NEW FILE */
             clear();
-            int col_number = 5;
-            int line_number;
-            line_number = 1;
+            Editor.cursor_col = 5;
+            Editor.cursor_row = 1;
             int input;
-            int mode; // 0 for normal,1 for insert and 2 for visual (no mode is set as default)
 
-            int editor_lines = (int)(LINES/1.1);
-            int editor_cols = COLS-4;
-            WINDOW *editor = newwin(editor_lines,editor_cols,1,1);
+            WINDOW *editor = newwin(EDITOR_ROWS,EDITOR_COLS,1,1);
             scrollok(editor,TRUE);
             box(editor,0,0);
 
-            int footer_lines = (LINES-editor_lines)-1;
+            int footer_lines = (LINES-EDITOR_ROWS)-1;
             int footer_cols = COLS-4;
-            WINDOW *footer = newwin(footer_lines,footer_cols,editor_lines+1,1);
+            WINDOW *footer = newwin(footer_lines,footer_cols,EDITOR_ROWS+1,1);
             box(footer,0,0);
 
             /*Making lines with the line numbers
              * Using derwin() to make a new window for the line numbers
              */
-            int lines_window_lines = editor_lines;
-            WINDOW *lines = derwin(editor, editor_lines-2, 4, 0, 2);
+            int lines_window_lines = EDITOR_ROWS;
+            WINDOW *lines = derwin(editor, EDITOR_ROWS-2, 4, 0, 2);
             mvwprintw(lines,1,1,"1");
 
             init_pair(3,COLOR_WHITE,COLOR_BLACK);
             wattron(editor,COLOR_PAIR(3));
-            mvwhline(editor,line_number,6,' ',editor_cols-7);
+            mvwhline(editor,Editor.cursor_row,6,' ',EDITOR_COLS-7);
             refresh();
             wrefresh(lines);
             wrefresh(editor);
             wrefresh(footer);
 
             while ((input=getch())) {
-                if (input== 'i') { // Turn on the insert mode
-                    mode = 1;
+                if (input== 'i') { // Turn on the insert Editor.mode
+                    Editor.mode = 1;
                     break;
-                } else if (input == 'n') { // Turn on the normal mode
-                    mode = 0;
+                } else if (input == 'n') { // Turn on the normal Editor.mode
+                    Editor.mode = 0;
                     break;
-                } else if (input == 'v') { // Turn on the visual mode
-                    mode = 2;
+                } else if (input == 'v') { // Turn on the visual Editor.mode
+                    Editor.mode = 2;
                     break;
                 } else if (input == 'q') {
                     endwin();
                     exit(EXIT_SUCCESS);
                 } else {
                     //Havent touched this one block yet
+                    Editor.mode = 1; // default mode
+                    break;
                 }
             }
 
             int character;
-            // Making insert mode
-            if (mode == 1) {
+            // Making insert Editor.mode
+            if (Editor.mode == 1) {
                 while ((character = getch())) {
+                    wmove(editor,Editor.cursor_row,Editor.cursor_col);
+                    wrefresh(editor);
                     if (character == '\033') { // Normal Mode end
-                        mode = handle_normal_mode(footer,editor_cols);
-                        if (mode == -1) {
+                        Editor.mode = handle_normal_mode(footer);
+                        if (Editor.mode == -1) {
                             return 0;
                         }
-                    }
-                    else if (character == '\n') {
-                        // newline (when enter key is pressed)
-                        line_number++;
-                        col_number = 5;
-                        mvwprintw(lines, line_number, 1, "%d", line_number);
-                        mvwhline(editor,line_number,6,' ',editor_cols-7);
-                        refresh();
-                        wrefresh(lines);
                         wrefresh(editor);
                         continue;
+                    }
+                    else if (character == '\n') {
+                        handle_carriage_return(lines,editor);
                     } else if (character == KEY_BACKSPACE || character == '\b' || character == 127) {
                         // Backspace: move back and delete character
-                        if (col_number > 5) {
-                            col_number--;
-                            mvwprintw(editor,line_number,col_number," ");
-                            wmove(editor,line_number,col_number);
+                        if (Editor.cursor_col > 5) {
+                            Editor.cursor_col--;
+                            mvwprintw(editor,Editor.cursor_row,Editor.cursor_col," ");
+                            wmove(editor,Editor.cursor_row,Editor.cursor_col);
                         }
                     } else if (character == KEY_LEFT) {
-                        if (col_number > 5) {
-                            col_number--;
-                            wmove(editor,line_number,col_number);
+                        // TODO: Fix character inserting (currently it overrides the character in the index++)
+                        if (Editor.cursor_col > 5) {
+                            Editor.cursor_col--;
+                            wmove(editor,Editor.cursor_row,Editor.cursor_col);
                         }
                     }
                     else {
                         // Normal character: check right boundary before printing
                         int max_x = getmaxx(editor);
-                        if (col_number < max_x - 1) {
-                            mvwprintw(editor, line_number, col_number, "%c", character);
-                            col_number++;
+                        if (Editor.cursor_col < max_x - 1) {
+                            mvwprintw(editor, Editor.cursor_row, Editor.cursor_col, "%c", character);
+                            Editor.cursor_col++;
                         }
                     }
 
