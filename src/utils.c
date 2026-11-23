@@ -70,19 +70,20 @@ int handle_normal_mode(WINDOW *footer_window) {
     }
 }
 
-void handle_carriage_return(WINDOW *lines,WINDOW *editor) {
+int handle_carriage_return(WINDOW *lines,WINDOW *editor) {
     // newline (when carriage return is pressed)
     Editor.cursor_row++;
     Editor.cursor_col = 5;
     mvwprintw(lines, Editor.cursor_row, 1, "%d",Editor.cursor_row);
     mvwhline(editor,Editor.cursor_row,6,' ',EDITOR_COLS-7);
-    handle_line_buff();
+    if (handle_line_buff() == -1) return -1;
     refresh();
     wrefresh(lines);
     wrefresh(editor);
+    return 0;
 }
 
-void handle_line_buff(void) {
+int handle_line_buff(void) {
     // printf("%s\n",Editor.line_buff);
     // printf("Address: %p\n", (void *)Editor.line_buff);
     // printf("First byte: %d\n", (unsigned char)Editor.line_buff[0]);
@@ -99,11 +100,12 @@ void handle_line_buff(void) {
 
     if (Editor.line_buff == NULL) {
         perror("malloc");
-        exit(EXIT_FAILURE);
+        return -1;
     }
 
     memset(Editor.line_buff, 0, 255);
     Editor.line_buff_size = 255;
+    return 0;
 }
 
 // Code for the insert mode
@@ -111,7 +113,7 @@ void handle_line_buff(void) {
 // Returns -1 when the program is intended to be quitted like when :q,:wq etc.. is pressed
 int handle_insert_mode(WINDOW *footer,WINDOW *lines,WINDOW *editor) {
     int line_idx=0; //Using this variable for indexing in Editor.line_buff
-    handle_line_buff();
+    if (handle_line_buff() == -1) return -1;
     while ((Editor.character = getch())) {
         // wmove(editor,Editor.cursor_row,Editor.cursor_col);
         // wrefresh(editor);
@@ -124,10 +126,10 @@ int handle_insert_mode(WINDOW *footer,WINDOW *lines,WINDOW *editor) {
             continue;
         }
         else if (Editor.character == '\n') {
-            FILE *log = fopen("debug.log", "a");
+            FILE *log = fopen("debug.log", "w");
             fprintf(log, "%s\n", Editor.line_buff);
             fclose(log);
-            handle_carriage_return(lines,editor);
+            if (handle_carriage_return(lines,editor) == -1) return -1;
             line_idx = 0; // resets the line_idx,the indexing of Editor.line_buff would start from 0 again.
             continue;
         } else if (Editor.character == KEY_BACKSPACE || Editor.character == '\b' || Editor.character == 127) {
@@ -156,17 +158,22 @@ int handle_insert_mode(WINDOW *footer,WINDOW *lines,WINDOW *editor) {
                 mvwprintw(editor, Editor.cursor_row, Editor.cursor_col, "%c", Editor.character);
                 Editor.cursor_col++;
 
-                line_idx++;
             }
         }
         // Updating Editor.line_buff buffer in the 'struct Editor Editor' struct
         if (line_idx < 255) {
             Editor.line_buff[line_idx] = Editor.character;
+            line_idx++;
         } else {
             // Allocating 64bytes more if the line_idx exceeded 255
-            Editor.line_buff = (char*)realloc(Editor.line_buff,Editor.line_buff_size+64);
+            if ((Editor.line_buff = (char*)realloc(Editor.line_buff,Editor.line_buff_size+64)) == NULL) {
+                // IF REALLOC FAILED
+                perror("realloc");
+                return -1;
+            }
             Editor.line_buff_size += 64;
             Editor.line_buff[line_idx] = Editor.character;
+            line_idx++;
         }
 
         // refreshing the windows
