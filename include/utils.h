@@ -16,6 +16,7 @@ struct Editor {
     int cursor_col;
     int mode;
     char *line_buff;
+    int character;
 };
 
 extern struct Editor Editor;
@@ -23,5 +24,7 @@ extern struct Editor Editor;
 void ncurses_init(void);
 int handle_normal_mode(WINDOW *footer_window);
 void handle_carriage_return(WINDOW *lines,WINDOW *editor);
+void handle_line_buff(void);
+int handle_insert_mode(WINDOW *footer,WINDOW *lines,WINDOW *editor);
 
 #endif

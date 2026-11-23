@@ -106,51 +106,13 @@ int main(int argc, char const *argv[])
                 }
             }
 
-            int character;
-            // Making insert Editor.mode
             if (Editor.mode == 1) {
-                while ((character = getch())) {
-                    wmove(editor,Editor.cursor_row,Editor.cursor_col);
-                    wrefresh(editor);
-                    if (character == '\033') { // Normal Mode end
-                        Editor.mode = handle_normal_mode(footer);
-                        if (Editor.mode == -1) {
-                            return 0;
-                        }
-                        wrefresh(editor);
-                        continue;
-                    }
-                    else if (character == '\n') {
-                        handle_carriage_return(lines,editor);
-                    } else if (character == KEY_BACKSPACE || character == '\b' || character == 127) {
-                        // Backspace: move back and delete character
-                        if (Editor.cursor_col > 5) {
-                            Editor.cursor_col--;
-                            mvwprintw(editor,Editor.cursor_row,Editor.cursor_col," ");
-                            wmove(editor,Editor.cursor_row,Editor.cursor_col);
-                        }
-                    } else if (character == KEY_LEFT) {
-                        // TODO: Fix character inserting (currently it overrides the character in the index++)
-                        if (Editor.cursor_col > 5) {
-                            Editor.cursor_col--;
-                            wmove(editor,Editor.cursor_row,Editor.cursor_col);
-                        }
-                    }
-                    else {
-                        // Normal character: check right boundary before printing
-                        int max_x = getmaxx(editor);
-                        if (Editor.cursor_col < max_x - 1) {
-                            mvwprintw(editor, Editor.cursor_row, Editor.cursor_col, "%c", character);
-                            Editor.cursor_col++;
-                        }
-                    }
+                if (handle_insert_mode(footer,lines,editor) == -1) break;
 
-                    // Consolidated refresh at the end of the loop
-                    refresh();
-                    wrefresh(lines);
-                    wrefresh(editor);
-                }
+            } else if (Editor.mode == 0) {
+                handle_normal_mode(footer);
             }
+
             refresh();
             wrefresh(lines);
             wrefresh(editor);
