@@ -149,7 +149,54 @@ int handle_insert_mode(WINDOW *footer,WINDOW *lines,WINDOW *editor) {
                 Editor.cursor_col--;
                 wmove(editor,Editor.cursor_row,Editor.cursor_col);
                 line_idx--;
+                refresh();
+                wrefresh(editor);
+            } else{}
+            // It will run until we reach the end of the line
+            // We could only get '\0' only if we go to end of the line using KEY_RIGHT
+            while (Editor.line_buff[line_idx] != '\0') {
+                int left_char = getch();
+                if (left_char == '\033') break; // Bug possibilities currently
+                // Handling KEY_LEFT again inside the line_buff editing while loop,to provide flexibility over using left arrow key
+                else if (left_char == KEY_LEFT) {
+                    if (Editor.cursor_col > 5) {
+                        Editor.cursor_col--;
+                        wmove(editor,Editor.cursor_row,Editor.cursor_col);
+                        line_idx--;
+                        refresh();
+                        wrefresh(editor);
+                    } else{}
+                    break;
+                }
+                char edited_line[Editor.line_buff_size+1];
+                int i = 0;
+                // Making 'edited_line' and then duplicating it in the 'Editor.line_buff'
+                // Re-rendering could be done here to refresh the editor window
+                while (i != line_idx+1) {
+                    edited_line[i] = Editor.line_buff[i];
+                    i++;
+                }
+                edited_line[i] = left_char;
+                // Appending characters of 'Editor.line_buff' after the index 'i'
+                int j = i;
+                i++;
+                while(Editor.line_buff[j]) {
+                    edited_line[i] = Editor.line_buff[j];
+                    i++;
+                    j++;
+                }
+                edited_line[i] = '\0';
+                mvwhline(editor,Editor.cursor_row,5,' ',1);
+                mvwprintw(editor, Editor.cursor_row,5,"%s",edited_line);
+                line_idx++;
+                Editor.cursor_col++;
+                wmove(editor,Editor.cursor_row,line_idx);
+                strcpy(Editor.line_buff,edited_line);
+                refresh();
+                wrefresh(editor);
+                wrefresh(lines);
             }
+            continue;
         }
         else {
             // Normal Editor.character: check right boundary before printing
@@ -161,9 +208,10 @@ int handle_insert_mode(WINDOW *footer,WINDOW *lines,WINDOW *editor) {
             }
         }
         // Updating Editor.line_buff buffer in the 'struct Editor Editor' struct
-        if (line_idx < 255) {
+        if (line_idx < Editor.line_buff_size-1) {
             Editor.line_buff[line_idx] = Editor.character;
             line_idx++;
+            Editor.line_buff[line_idx] = '\0';
         } else {
             // Allocating 64bytes more if the line_idx exceeded 255
             if ((Editor.line_buff = (char*)realloc(Editor.line_buff,Editor.line_buff_size+64)) == NULL) {
@@ -174,6 +222,7 @@ int handle_insert_mode(WINDOW *footer,WINDOW *lines,WINDOW *editor) {
             Editor.line_buff_size += 64;
             Editor.line_buff[line_idx] = Editor.character;
             line_idx++;
+            Editor.line_buff[line_idx] = '\0';
         }
 
         // refreshing the windows
