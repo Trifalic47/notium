@@ -84,15 +84,34 @@ void handle_carriage_return(WINDOW *lines,WINDOW *editor) {
 
 void handle_line_buff(void) {
     // printf("%s\n",Editor.line_buff);
+    // printf("Address: %p\n", (void *)Editor.line_buff);
+    // printf("First byte: %d\n", (unsigned char)Editor.line_buff[0]);
+    // free(Editor.line_buff);
+    // memset(Editor.line_buff,0,0);
+    //
+    // Editor.line_buff = (char*)malloc(255);
+    // Editor.line_buff_size = 255;
+    // //Allocating 255bytes for a line... Later we could realloc() this if the size is exceeded
     free(Editor.line_buff);
-    memset(Editor.line_buff,0,0);
-    Editor.line_buff = (char*)malloc(255);
-    //Allocating 255bytes for a line... Later we could realloc() this if the size is exceeded
+    Editor.line_buff = NULL;
+
+    Editor.line_buff = malloc(255);
+
+    if (Editor.line_buff == NULL) {
+        perror("malloc");
+        exit(EXIT_FAILURE);
+    }
+
+    memset(Editor.line_buff, 0, 255);
+    Editor.line_buff_size = 255;
 }
 
+// Code for the insert mode
+// Calls the 'handle_normal_mode' function inside it.
+// Returns -1 when the program is intended to be quitted like when :q,:wq etc.. is pressed
 int handle_insert_mode(WINDOW *footer,WINDOW *lines,WINDOW *editor) {
-
     int line_idx=0; //Using this variable for indexing in Editor.line_buff
+    handle_line_buff();
     while ((Editor.character = getch())) {
         // wmove(editor,Editor.cursor_row,Editor.cursor_col);
         // wrefresh(editor);
@@ -105,18 +124,22 @@ int handle_insert_mode(WINDOW *footer,WINDOW *lines,WINDOW *editor) {
             continue;
         }
         else if (Editor.character == '\n') {
+            FILE *log = fopen("debug.log", "a");
+            fprintf(log, "%s\n", Editor.line_buff);
+            fclose(log);
             handle_carriage_return(lines,editor);
-            line_idx = 0;
+            line_idx = 0; // resets the line_idx,the indexing of Editor.line_buff would start from 0 again.
             continue;
         } else if (Editor.character == KEY_BACKSPACE || Editor.character == '\b' || Editor.character == 127) {
             // Backspace: move back and delete Editor.character
             if (Editor.cursor_col > 5) {
                 Editor.cursor_col--;
+                // replace the character to be deleted with " "(blank space)
                 mvwprintw(editor,Editor.cursor_row,Editor.cursor_col," ");
+                // Text cursor would be moved one cell back and text editing would be continued from there
                 wmove(editor,Editor.cursor_row,Editor.cursor_col);
-                Editor.line_buff[line_idx] = '\0';
                 line_idx--;
-
+                Editor.line_buff[line_idx] = '\0';
             }
         } else if (Editor.character == KEY_LEFT) {
             // TODO: Fix Editor.character inserting (currently it overrides the character in the index++)
@@ -136,14 +159,17 @@ int handle_insert_mode(WINDOW *footer,WINDOW *lines,WINDOW *editor) {
                 line_idx++;
             }
         }
-        // if (line_idx < 255) {
-        //     Editor.line_buff[line_idx] = Editor.character;
-        // } else {
-        //     // Allocating 64bytes more
-        //     Editor.line_buff = (char*)realloc(Editor.line_buff,64);
-        //     Editor.line_buff[line_idx] = Editor.character;
-        // }
-        // Consolidated refresh at the end of the loop
+        // Updating Editor.line_buff buffer in the 'struct Editor Editor' struct
+        if (line_idx < 255) {
+            Editor.line_buff[line_idx] = Editor.character;
+        } else {
+            // Allocating 64bytes more if the line_idx exceeded 255
+            Editor.line_buff = (char*)realloc(Editor.line_buff,Editor.line_buff_size+64);
+            Editor.line_buff_size += 64;
+            Editor.line_buff[line_idx] = Editor.character;
+        }
+
+        // refreshing the windows
         refresh();
         wrefresh(lines);
         wrefresh(editor);

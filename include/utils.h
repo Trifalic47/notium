@@ -16,6 +16,7 @@ struct Editor {
     int cursor_col;
     int mode;
     char *line_buff;
+    int line_buff_size;
     int character;
 };
 

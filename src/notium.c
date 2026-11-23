@@ -110,7 +110,9 @@ int main(int argc, char const *argv[])
                 if (handle_insert_mode(footer,lines,editor) == -1) break;
 
             } else if (Editor.mode == 0) {
-                handle_normal_mode(footer);
+                if (handle_normal_mode(footer) == -1) break;
+            } else {
+                // Pass
             }
 
             refresh();
