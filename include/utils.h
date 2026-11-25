@@ -27,5 +27,6 @@ int handle_normal_mode(WINDOW *footer_window);
 int handle_line_buff(void);
 int handle_carriage_return(WINDOW *lines,WINDOW *editor);
 int handle_insert_mode(WINDOW *footer,WINDOW *lines,WINDOW *editor);
+int handle_backspace(WINDOW *editor,int line_idx);
 
 #endif
